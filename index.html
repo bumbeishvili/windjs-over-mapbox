@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Wind Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!--   CDN SCRIPTS -->
+  <script src='https://api.mapbox.com/mapbox-gl-js/v1.7.0/mapbox-gl.js'></script>
+  <script
+    src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.4.2/mapbox-gl-geocoder.min.js"></script>
+
+  <!--   LOCAL SCRIPTS -->
+  <script src="./libs/windy.js"></script>
+
+  <!--   CDN STYLES -->
+  <link href='https://api.mapbox.com/mapbox-gl-js/v1.7.0/mapbox-gl.css' rel='stylesheet' />
+  <link rel="stylesheet"
+    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.4.2/mapbox-gl-geocoder.css"
+    type="text/css" />
+
+  <link href='./styles/styles.css' rel='stylesheet' />
+
+</head>
+
+<body translate="no">
+
+  <div style="display:initial" class="wind-map-container">
+    <canvas id="mapcanvas" width="1440" height="604"></canvas>
+    <div id="geocoder" class="geocoder"></div>
+  </div>
+
+  <!--   MAPBOX MAP CONTAINER -->
+  <div class="mapbox-map-container">
+    <div id="mapbox_map"></div>
+  </div>
+
+  <script>
+    let windy;
+    let timeout;
+
+    mapboxgl.accessToken = 'pk.eyJ1Ijoia2F0YW1hcmFuaTQiLCJhIjoiY2ppNDdtenh5MDFkYTN2b2VjOG5ucmIybCJ9.AG0bncC30hHPHVRnVGeCxQ'
+
+    const map = new mapboxgl.Map({
+      container: 'mapbox_map',
+      center: [45, 0],
+      zoom: 1.5,
+      style: 'mapbox://styles/katamarani4/ck5s617rv0px31it4t0l3bd0o',
+      maxBounds: [
+        [-180, -60], // Southwest coordinates
+        [180, 70] // Northeast coordinates
+      ]
+    });
+
+    map.doubleClickZoom.disable();
+
+
+
+    var geocoder = new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      mapboxgl: mapboxgl,
+      marker: false,
+      flyTo: false
+    });
+    document.getElementById('geocoder').appendChild(geocoder.onAdd(map));
+
+
+    map.on('resize', e => {
+      resetWind(map)
+    })
+
+    map.on('move', e => {
+      resetWind(map)
+    })
+
+    map.on('zoom', e => {
+      resetWind(map)
+    })
+
+
+    map.once('style.load', function () {
+      resetWind(map)
+      map.setPaintProperty('water-fill', 'fill-color', '#24293A');
+    });
+
+
+
+    function resetWind(map) {
+      const obj = getEventObject(map);
+      const { zoomLevel, north, south, west, east, width, height } = obj;
+      mapcanvas.style.display = 'none';
+      if (windy) {
+        windy.stop();
+      }
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      timeout = setTimeout(function () {
+        let particleWidth = 0.8;
+        if (zoomLevel > 2) {
+          particleWidth = 0.6
+        }
+        if (zoomLevel > 3) {
+          particleWidth = 0.4
+        }
+        if (zoomLevel > 4) {
+          particleWidth = 0.2
+        }
+        if (zoomLevel > 5) {
+          particleWidth = 0.07
+        }
+        if (zoomLevel > 6) {
+          particleWidth = 0.05
+        }
+        mapcanvas.style.display = 'initial';
+        mapcanvas.width = width;
+        mapcanvas.height = height;
+        windy.start(
+          [[0, 0], [width, height]],
+          width,
+          height,
+          [[west, south,], [east, north,]],
+          { particleLineWidth: particleWidth }
+        );
+      }, 500)
+    }
+
+    function getEventObject(map) {
+      const canvas = map.getCanvas();
+      const dimensions = map.getBounds();
+
+      const result = {
+        width: canvas.width,
+        height: canvas.height,
+        north: dimensions.getNorth(),
+        south: dimensions.getSouth(),
+        west: dimensions.getWest(),
+        east: dimensions.getEast(),
+        zoomLevel: map.getZoom()
+      }
+      return result;
+    }
+
+    fetch('gfs.json')
+      .then(d => d.json())
+      .then((data) => {
+        console.log(data);
+        // Remember - dom elements with ID, are exposed globally, so mapcanvas element exists already
+        windy = new Windy({ canvas: mapcanvas, data: data });
+        resetWind(map)
+      })
+
+
+  </script>
+
+</body>
+
+</html>
