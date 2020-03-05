@@ -1,6 +1,6 @@
 # windjs-over-mapbox
 
-Article - https://medium.com/@scottbasgaard/looks-great-255882111ca5
+Article - https://medium.com/@bumbeishvili/displaying-wind-map-over-a-live-map-3319003f6312
 
 Display wind map over live map
 
